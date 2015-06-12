@@ -45,7 +45,8 @@ def list_characters():
                 'thumbnail': None
             }
             if hasattr(item['thumbnail'], 'keys'):
-                c['thumbnail'] = item['thumbnail']['path']
+                c['thumbnail'] = "%s/portrait_uncanny.%s" % (
+                    item['thumbnail']['path'], item['thumbnail']['extension'])
             cc.append(c)
         return cc
     else:
