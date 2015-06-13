@@ -14,7 +14,7 @@ from flask import render_template
 
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
 logging.getLogger('requests').setLevel(logging.DEBUG)
 log = logging.getLogger('ccc-api')
@@ -39,6 +39,7 @@ def cache(wrapped, instance, args, kwargs):
     log.debug("Checking for [%s] hash of [%s]", request.url, url_hash)
     cache_path = os.path.join(app.config['CACHE_DIR'], url_hash)
     cache_age = time.time() - os.path.getmtime(cache_path)
+    log.debug("Cache age [%s]", cache_age)
     if os.path.exists(cache_path) and cache_age < app.config['CACHE_AGE']:
         r = open(cache_path).read()
     else:
