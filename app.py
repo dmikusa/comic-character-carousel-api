@@ -4,6 +4,7 @@ import uuid
 import requests
 import hashlib
 import logging
+from timeit import default_timer
 from flask import Flask
 from flask import request
 from flask import render_template
@@ -33,6 +34,7 @@ def generate_auth_params():
 
 
 def list_characters(limit=20, offset=0, orderBy='name'):
+    start = default_timer()
     params = generate_auth_params()
     params['limit'] = limit
     params['offset'] = offset
@@ -63,6 +65,7 @@ def list_characters(limit=20, offset=0, orderBy='name'):
                 c['thumbnail'] = "%s/portrait_uncanny.%s" % (
                     item['thumbnail']['path'], item['thumbnail']['extension'])
             result['cc'].append(c)
+        log.info('Result duration [%s]', (default_timer() - start))
         return result
     else:
         log.error('HTTP Code [%d]', r.status_code)
