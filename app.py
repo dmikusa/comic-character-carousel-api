@@ -5,6 +5,7 @@ import requests
 import hashlib
 import logging
 from flask import Flask
+from flask import request
 from flask import render_template
 
 
@@ -15,28 +16,42 @@ logging.getLogger('requests').setLevel(logging.DEBUG)
 log = logging.getLogger('ccc-api')
 
 
-
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object('config')
 app.config.from_pyfile('config.py')
 
 
-def list_characters():
+def generate_auth_params():
     req_id = uuid.uuid1().hex
     req_data = req_id + app.config['PRIVATE_KEY'] + app.config['PUBLIC_KEY']
     req_hash = hashlib.md5(req_data).hexdigest()
-    params = {
+    return {
         'ts': req_id,
         'hash': req_hash,
         'apikey': app.config['PUBLIC_KEY']
     }
+
+
+def list_characters(limit=20, offset=0, orderBy='name'):
+    params = generate_auth_params()
+    params['limit'] = limit
+    params['offset'] = offset
+    params['orderBy'] = orderBy
     r = requests.get(
         '%s/v1/public/characters' % app.config['API'], params=params)
     if r.status_code == 200:
-        data = r.json()['data']
-        cc = []
-        log.info('Found %d characters', len(data['results']))
-        for item in data['results']:
+        resp = r.json()
+        result = {
+            'copyright': resp['copyright'],
+            'attributionText': resp['attributionText'],
+            'offset': resp['data']['offset'],
+            'limit': resp['data']['limit'],
+            'total': resp['data']['total'],
+            'count': resp['data']['count'],
+            'cc': []
+        }
+        log.info('Found %d characters', result['count'])
+        for item in resp['data']['results']:
             c = {
                 'id': item['id'],
                 'name': item['name'],
@@ -47,8 +62,8 @@ def list_characters():
             if hasattr(item['thumbnail'], 'keys'):
                 c['thumbnail'] = "%s/portrait_uncanny.%s" % (
                     item['thumbnail']['path'], item['thumbnail']['extension'])
-            cc.append(c)
-        return cc
+            result['cc'].append(c)
+        return result
     else:
         log.error('HTTP Code [%d]', r.status_code)
         return []
@@ -56,7 +71,11 @@ def list_characters():
 
 @app.route('/')
 def index():
-    return json.dumps(list_characters())
+    return json.dumps(
+        list_characters(
+            limit=request.args.get('limit', 20),
+            offset=request.args.get('offset', 0),
+            orderBy=request.args.get('orderBy', 'name')))
 
 
 if __name__ == "__main__":
