@@ -6,6 +6,7 @@ import hashlib
 import logging
 import wrapt
 import hashlib
+import time
 from timeit import default_timer
 from flask import Flask
 from flask import request
@@ -37,7 +38,8 @@ def cache(wrapped, instance, args, kwargs):
     url_hash = hashlib.sha512(request.url).hexdigest()
     log.debug("Checking for [%s] hash of [%s]", request.url, url_hash)
     cache_path = os.path.join(app.config['CACHE_DIR'], url_hash)
-    if os.path.exists(cache_path):
+    cache_age = time.time() - os.path.getmtime(cache_path)
+    if os.path.exists(cache_path) and cache_age < app.config['CACHE_AGE']:
         r = open(cache_path).read()
     else:
         r = wrapped(*args, **kwargs)
@@ -106,4 +108,6 @@ def index():
 
 
 if __name__ == "__main__":
+    if not os.path.exists(app.config['CACHE_DIR']):
+        os.makedirs(app.config['CACHE_DIR'])
     app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5001)))
