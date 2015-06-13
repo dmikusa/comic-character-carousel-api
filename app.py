@@ -38,14 +38,19 @@ def cache(wrapped, instance, args, kwargs):
     url_hash = hashlib.sha512(request.url).hexdigest()
     log.debug("Checking for [%s] hash of [%s]", request.url, url_hash)
     cache_path = os.path.join(app.config['CACHE_DIR'], url_hash)
-    cache_age = time.time() - os.path.getmtime(cache_path)
-    log.debug("Cache age [%s]", cache_age)
-    if os.path.exists(cache_path) and cache_age < app.config['CACHE_AGE']:
+    if (os.path.exists(cache_path) and 
+        cache_age(cache_path) < app.config['CACHE_AGE']):
         r = open(cache_path).read()
     else:
         r = wrapped(*args, **kwargs)
         open(cache_path, 'w').write(r)
     return r
+
+
+def cache_age(cache_path):
+    age = time.time() - os.path.getmtime(cache_path)
+    log.debug("Cache age [%s]", age)
+    return age
 
 
 def generate_auth_params():
