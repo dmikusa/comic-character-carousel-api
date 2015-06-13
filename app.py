@@ -5,6 +5,7 @@ import requests
 import hashlib
 import logging
 import wrapt
+import hashlib
 from timeit import default_timer
 from flask import Flask
 from flask import request
@@ -28,6 +29,19 @@ def time_request(wrapped, instance, args, kwargs):
     start = default_timer()
     r = wrapped(*args, **kwargs)
     log.info('Request duration [%s]', (default_timer() - start))
+    return r
+
+
+@wrapt.decorator
+def cache(wrapped, instance, args, kwargs):
+    url_hash = hashlib.sha512(request.url).hexdigest()
+    log.debug("Checking for [%s] hash of [%s]", request.url, url_hash)
+    cache_path = os.path.join(app.config['CACHE_DIR'], url_hash)
+    if os.path.exists(cache_path):
+        r = open(cache_path).read()
+    else:
+        r = wrapped(*args, **kwargs)
+        open(cache_path, 'w').write(r)
     return r
 
 
@@ -82,6 +96,7 @@ def list_characters(limit=20, offset=0, orderBy='name'):
 
 
 @app.route('/')
+@cache
 def index():
     return json.dumps(
         list_characters(
